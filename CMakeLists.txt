@@ -1,41 +1,19 @@
-cmake_minimum_required(VERSION 3.10)
-project(asteroids)
+cmake_minimum_required (VERSION 3.9)
+project (asteroids)
 
-# C++ Standard
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Compiler-Flags
-add_compile_options(-g -Wall -Wextra -Wpedantic)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Includes & Libs
 include_directories(/opt/homebrew/include)
 link_directories(/opt/homebrew/lib)
 
-# Quell-Dateien Hauptprogramm
-set(SRC_FILES
-        game.cc
-        math.cc
-        matrix.cc
-        geometry.cc
-        sdl2_renderer.cc
-        opengl_renderer.cc
-        sound.cc
-        main_game.cc
-        physics.cc
-        sdl2_game_controller.cc
-        timer.cc
-)
+add_compile_options(-g -Wall -Wextra -Wpedantic -Wl,--stack,16777216)
 
-# Main executable
-add_executable(main_game ${SRC_FILES})
+add_executable(main_game game.cc math.cc matrix.cc geometry.cc sdl2_renderer.cc opengl_renderer.cc sound.cc main_game.cc physics.cc sdl2_game_controller.cc timer.cc wavefront.cc)
 
-# Plattformabhängige OpenGL/SDL2-Bindung
-if(APPLE)
-    target_link_libraries(main_game SDL2 SDL2_mixer "-framework OpenGL" GLEW)
-else()
-    target_link_libraries(main_game SDL2 SDL2_mixer GL GLEW)
-endif()
+target_link_libraries(main_game SDL2 SDL2_mixer "-framework OpenGL" GLEW)
+
 
 # -----------------------
 # GoogleTest Setup

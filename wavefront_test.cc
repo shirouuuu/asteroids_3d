@@ -365,16 +365,13 @@ std::stringstream ss( "mtllib basic.mtl\n"
   ASSERT_NEAR(0.0f, color[1], 0.00001f);
   ASSERT_NEAR(1.0f, color[2], 0.00001f);
 }
-
-/*
-// cube.obj has to be in the same folder like the test executable!
 TEST(WAVEFRONT_IMPORTER, ParseFromFile) {
-  std::fstream fs( "cube.obj" );  
+  std::fstream fs( "cube.obj" );
   WavefrontImporter importer(fs);               
   importer.parse();                                       
   std::map<std::string, Material> materials = importer.get_materials();
   
-  ASSERT_EQ(8, importer.get_vertices().size());  
+  ASSERT_EQ(8, importer.get_vertices().size());
   ASSERT_EQ(6, importer.get_normals().size());  
   ASSERT_EQ(12, importer.get_faces().size());  
   ASSERT_EQ(6, materials.size());
@@ -382,7 +379,7 @@ TEST(WAVEFRONT_IMPORTER, ParseFromFile) {
   ASSERT_NEAR(0.0f, color[0], 0.00001f);
   ASSERT_NEAR(1.0f, color[1], 0.00001f);
   ASSERT_NEAR(1.0f, color[2], 0.00001f);
-}*/
+}
 }
 
 

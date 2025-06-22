@@ -1,4 +1,4 @@
-#include <GL/glew.h>
+#include <GL/glew.h> 
 #include <SDL2/SDL.h>
 #include <iostream>
 #include <glm/glm.hpp>
@@ -9,6 +9,16 @@
 #include "wavefront.h"
 #include "debug.h"
 
+#ifdef _WIN32
+#include <windows.h>
+int main(void);
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int CmdShow)
+{
+    return main();
+}
+#endif
+
 const int window_width = 1024;
 const int window_height = 768;
 
@@ -17,19 +27,18 @@ SDL_GLContext context;
 
 void init() {
   window = nullptr;
-
-  #ifdef __APPLE__
-    SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
-  #endif
-
-
   if( SDL_Init( SDL_INIT_VIDEO ) < 0 ) {
       error("SDL could not initialize! SDL_Error: ");
       error(SDL_GetError());
       throw EXIT_FAILURE;
+  } 
+  window = SDL_CreateWindow( "Simple OpenGL/Wavefront Viewer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN );
+  if( window == nullptr ) {
+      error("Window could not be created! SDL_Error: ");
+      error(SDL_GetError());
+      throw EXIT_FAILURE;
   }
-
-
+  
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -37,27 +46,15 @@ void init() {
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-  window = SDL_CreateWindow( "Simple OpenGL/Wavefront Viewer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN );
-  if( window == nullptr ) {
-      error("Window could not be created! SDL_Error: ");
-      error(SDL_GetError());
-      throw EXIT_FAILURE;
-  }
-
-  SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-  SDL_ShowWindow(window); // sicherstellen, dass es auch sichtbar gemacht wird
-
-
   context = SDL_GL_CreateContext(window);
 
-  glewExperimental = GL_TRUE;
   GLenum err = glewInit(); // to be called after OpenGL render context is created
   if (GLEW_OK != err) {
     error("GLEW can not initialize. GlewError: ");
     error(glewGetErrorString(err));
   }
 
-  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_DEPTH_TEST); 
 
 }
 
@@ -84,14 +81,13 @@ void compile_shader(GLint shader, const char * source) {
   GLint status;
   glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
   if (status == GL_FALSE) {
-    std::cerr << "Shader konnte nicht kompiliert werden:" << std::endl;
+    std::cerr << " Shader did not compile." << std::endl;
     char log[512];
-    glGetShaderInfoLog(shader, 512, NULL, log);
-    std::cerr << log << std::endl;  // << HIER!
+    glGetShaderInfoLog( shader, 512, NULL, log) ;
+    error(log);
     throw EXIT_FAILURE;
   }
 }
-
 
 void check_link_status(GLint shader_program) {
   GLint status;
@@ -112,7 +108,7 @@ GLuint shaderProgram;
 void create_shaders() {
 
   const char *vertexShaderSource = "#version 330 core\n"
-    "layout (location = 0) in vec3 position;\n"
+    "layout (location = 0) in vec3 position;\n" 
     "layout (location = 1) in vec3 incolor;\n"
     "layout (location = 2) in vec3 innormal;\n"
     "out vec3 color;\n"
@@ -125,7 +121,7 @@ void create_shaders() {
     "normal = normalize( model * vec4(innormal, 1.0));\n"
     "}\0";
 
-  // direction to light source is hard coded: (0,1,-4)
+  // direction to light source is hard coded: (0,1,-4)  
   // Lambertian shading used for vertices of triangle
   // cause during rasterization colors are interpolated, the result is Gouraud-Shading
   const char *fragmentShaderSource = "#version 330 core\n"
@@ -135,7 +131,7 @@ void create_shaders() {
   "void main () {\n"
   "  outColor = vec4(color * (0.3 + 0.7 * max(0.0, dot(normal, normalize( vec4(0.0, 1.0, -4.0, 0.0))))) , 1.0);\n"
   "}\n\0";
-
+  
   GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER) ;
   compile_shader(vertexShader, vertexShaderSource);
 
@@ -153,7 +149,7 @@ void create_shaders() {
 void switch_background_color() {
   SDL_Delay(1000);
   glClearColor ( 1.0, 0.0, 0.0, 1.0 );
-  glClear ( GL_COLOR_BUFFER_BIT
+  glClear ( GL_COLOR_BUFFER_BIT 
             | GL_DEPTH_BUFFER_BIT); // clear depth buffer from last frame!
   swap_window();
   SDL_Delay(1000);
@@ -165,7 +161,7 @@ void switch_background_color() {
 // scale can be used to scale the coordinates up or down to canonical coords.
 void view(std::vector<float> & vertices, float scale) {
   static float PI = 3.1415f;
-
+  
   glClearColor ( 0.5, 0.5, 0.5, 1.0 );
   glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
@@ -174,22 +170,22 @@ void view(std::vector<float> & vertices, float scale) {
   glCullFace(GL_BACK);
   glFrontFace(GL_CW);
 
-  GLuint vao;
+  GLuint vao;  
   glGenVertexArrays(1, &vao); // create a vertex array object (VAO)
   glBindVertexArray(vao); // make vao active
 
   GLuint vbo;
   glGenBuffers(1, &vbo); // create a new vertex buffer object (VBO)
-  glBindBuffer(GL_ARRAY_BUFFER, vbo); // make it active
-
+  glBindBuffer(GL_ARRAY_BUFFER, vbo); // make it active  
+  
   // transfer data from RAM to GPU buffer
   glBufferData(GL_ARRAY_BUFFER,
-               vertices.size() * sizeof(float),
+               vertices.size() * sizeof(float), 
                vertices.data(),
                GL_STATIC_DRAW);
 
   /* the following layout is assumed for each vertex of a face (triangle)
-    x1 y1 z1 nx1 ny1 nz1 r1 g1 b1
+    x1 y1 z1 nx1 ny1 nz1 r1 g1 b1 
   */
 
   // active vbo will be associated to active vao by the following calls
@@ -217,7 +213,7 @@ void view(std::vector<float> & vertices, float scale) {
                         (void*)(3 * sizeof(float)) ); // offset to color data in the vbo
   glEnableVertexAttribArray(2);
 
-
+  
   glUseProgram(shaderProgram);
 
   for (float angle = 0.0f; angle < 2 * PI; angle += PI / 32.0) {
@@ -231,10 +227,10 @@ void view(std::vector<float> & vertices, float scale) {
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     GLint uniformView = glGetUniformLocation (shaderProgram, "model");
-    glUniformMatrix4fv(uniformView, 1 , GL_FALSE , glm::value_ptr(model) ) ;
+    glUniformMatrix4fv(uniformView, 1 , GL_FALSE , glm::value_ptr(model) ) ;  
     glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 9);
     swap_window();
-
+  
     delay(100);
   }
   delay(2000);
@@ -249,14 +245,14 @@ Material default_material = { {1.0f, 1.0f, 1.0f} };
    where each face consists of a sequence of 3 (=number of triangle vertices) * 9 floats
    x1 y1 z1 nx1 ny1 nz1 r1 g1 b1 | x2 y2 z2 nx2 ny2 nz2 r2 g2 b2 | x3 y3 z3 nx3 ny3 nz3 r3 g3 b3
      vertex   normal     color       vertex    normal     color     vertex    normal     color
-
+     
   if no material is given for a face, then the default_material is used
-
+  
   if you want to use other layouts, then adapt this code
-*/
+*/     
 std::vector<float> create_vertices(WavefrontImporter & wi) {
   std::vector<float> vertices;
-
+  
   for (Face face : wi.get_faces() ) {
     for (ReferenceGroup group : face.reference_groups ) {
       for (size_t i = 0; i < 3; i++) {
@@ -269,43 +265,93 @@ std::vector<float> create_vertices(WavefrontImporter & wi) {
       for (size_t i = 0; i < 3; i++) {
         vertices.push_back( face.material->ambient[i]);
       }
-    }
+    } 
   }
   return vertices;
 }
-
-int main(int, char**) {
-  std::fstream in("teapot.obj");
-  WavefrontImporter wi(in);
+/*
+int main(void) {
+  std::fstream in("asteroid.obj");
+  WavefrontImporter wi( in );
   wi.parse();
   std::vector<float> vertices = create_vertices(wi);
-
   init();
-
-  // Warte bis Fenster sichtbar
-  bool window_visible = false;
-  SDL_Event event;
-  while (!window_visible) {
-    while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_WINDOWEVENT) {
-        if (event.window.event == SDL_WINDOWEVENT_SHOWN) {
-          window_visible = true;
-        }
-        else if (event.window.event == SDL_WINDOWEVENT_CLOSE) {
-          exit();
-          return EXIT_FAILURE;
-        }
-      }
-    }
-    SDL_Delay(10);
-  }
-
-  create_shaders();
-
-  view(vertices, 0.25f);  // oder deine animierende Loop
-
+  create_shaders();   
+  view(vertices, 0.02886f); // 0.25f adapt the scale factor to the objects local coordinates
+                         // such that the scaled vertex coordinates fit into the canonical box [-1,1]^3
   exit();
-
+  
   return EXIT_SUCCESS;
 }
+*/
+int main(void) {
+	int choice;
+    std::cout << "Bitte wählen Sie ein Objekt:\n";
+    std::cout << "1: Asteroid\n";
+    std::cout << "2: Debris\n";
+	std::cout << "3: Saucer\n";
+	std::cout << "4: Spaceship\n";
+	std::cout << "5: Spaceship_boost\n";
+	std::cout << "6: Torpedo\n";
+    std::cout << "Ihre Auswahl: ";
+    std::cin >> choice;
 
+    std::vector<float> vertices; // Speicher für die ausgewählten Vertices
+
+    switch (choice) {
+        case 1: {
+            std::fstream in("asteroid.obj");
+            WavefrontImporter wi(in);
+            wi.parse();
+            vertices = create_vertices(wi);
+            break;
+        }
+        case 2: {
+            std::fstream in("debris.obj");
+            WavefrontImporter wi(in);
+            wi.parse();
+            vertices = create_vertices(wi);
+            break;
+        }
+        case 3: {
+            std::fstream in("saucer.obj");
+            WavefrontImporter wi(in);
+            wi.parse();
+            vertices = create_vertices(wi);
+            break;
+        }
+		case 4: {
+            std::fstream in("spaceship.obj");
+            WavefrontImporter wi(in);
+            wi.parse();
+            vertices = create_vertices(wi);
+            break;
+        }
+        case 5: {
+            std::fstream in("spaceship_boost.obj");
+            WavefrontImporter wi(in);
+            wi.parse();
+            vertices = create_vertices(wi);
+            break;
+        }
+		case 6: {
+            std::fstream in("torpedo.obj");
+            WavefrontImporter wi(in);
+            wi.parse();
+            vertices = create_vertices(wi);
+            break;
+        }
+        default:
+            std::cerr << "Ungültige Auswahl. Programm wird beendet.\n";
+            return EXIT_FAILURE;
+    }
+
+  	init();
+  	create_shaders();
+
+  	view(vertices, 0.02886f); // adapt the scale factor to the objects local coordinates
+                         // such that the scaled vertex coordinates fit into the canonical box [-1,1]^3
+  	exit();
+
+	return EXIT_SUCCESS;
+}
