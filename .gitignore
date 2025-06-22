@@ -1,0 +1,15 @@
+.idea
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake.user
+CTestTestfile.cmake
+/googletest_binary_dir/
+game_test
+geometry_test
+main_game
+math_test
+matrix_test
+physics_test
