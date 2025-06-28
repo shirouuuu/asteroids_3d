@@ -13,3 +13,5 @@ main_game
 math_test
 matrix_test
 physics_test
+wavefront_test
+/lib/

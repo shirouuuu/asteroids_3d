@@ -9,17 +9,6 @@
 #include "sdl2_game_controller.h"
 #include <memory>
 
-#include <fstream>
-#include <GL/glew.h>
-#include <SDL2/SDL.h>
-#include <iostream>
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <vector>
-#include <fstream>
-#include <array>
-#include "wavefront.h"
-
 #include "debug.h"
 
 #ifdef _WIN32

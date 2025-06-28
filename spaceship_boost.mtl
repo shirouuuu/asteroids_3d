@@ -1,12 +1,12 @@
-# Blender 4.3.2 MTL File: 'models.blend'
+# Blender 4.4.3 MTL File: 'spaceship.blend'
 # www.blender.org
 
-newmtl spaceship_boost_blue
-Ns 0.000000
+newmtl Material.005
+Ns 250.000000
 Ka 1.000000 1.000000 1.000000
-Kd 0.775476 1.000000 0.465505
+Kd 0.000000 0.800378 0.092108
 Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
+Ke 0.005873 0.500000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
