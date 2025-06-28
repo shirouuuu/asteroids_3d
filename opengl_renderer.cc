@@ -403,8 +403,9 @@ void OpenGLRenderer::create(SpaceshipDebris *debris, std::vector<std::unique_ptr
 
 void OpenGLRenderer::create(Debris *debris, std::vector<std::unique_ptr<TypedBodyView> > &views) {
     debug(4, "create(Debris *) entry...");
-    views.push_back(std::make_unique<TypedBodyView>(debris, vbos[3], shaderProgram3d, vertice_3d_data[3].size(), 0.1f,
-                                                    GL_TRIANGLES, true,
+    // Fix: Use vbos[10] (debris_points, 2D) and shaderProgram (2D), not vbos[3]/shaderProgram3d (3D)
+    views.push_back(std::make_unique<TypedBodyView>(debris, vbos[10], shaderProgram, vertice_data[10]->size(), 0.1f,
+                                                    GL_POINTS, false,
                                                     []() -> bool { return true; },
                                                     [debris](TypedBodyView *view) -> void {
                                                         view->set_scale(
