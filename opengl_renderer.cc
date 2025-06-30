@@ -2,10 +2,10 @@
 #include <cassert>
 #include <span>
 #include <utility>
-
 #include "wavefront.h"
 
-// geometric data as in original game and game coordinates
+// Geometrische Daten für die 2D-Darstellung der Spielobjekte (z.B. Raumschiff, Asteroiden, Ziffern)
+// Diese Vektoren definieren die Eckpunkte der jeweiligen Formen im Spielkoordinatensystem
 std::vector<Vector2df> spaceship = {
     Vector2df{-6.0f, 3.0f},
     Vector2df{-6.0f, -3.0f},
@@ -139,6 +139,7 @@ std::vector<Vector2df> digit_7 = {{0, -8}, {4, -8}, {4, 0}};
 std::vector<Vector2df> digit_8 = {{0, -8}, {4, -8}, {4, 0}, {0, 0}, {0, -8}, {0, -4}, {4, -4}};
 std::vector<Vector2df> digit_9 = {{4, 0}, {4, -8}, {0, -8}, {0, -4}, {4, -4}};
 
+// Zeiger auf die oben definierten Vektordaten, um sie später für die OpenGL-Puffer zu verwenden
 std::vector<std::vector<Vector2df> *> vertice_data = {
     &spaceship, &flame,
     &torpedo_points, &saucer_points,
@@ -147,8 +148,10 @@ std::vector<std::vector<Vector2df> *> vertice_data = {
     &debris_points,
     &digit_0, &digit_1, &digit_2, &digit_3, &digit_4, &digit_5, &digit_6, &digit_7, &digit_8, &digit_9};
 
-// class OpenGLView
+// ===================== OpenGLView =====================
 
+// Konstruktor für OpenGLView: Initialisiert ein Vertex Array Object (VAO) und bindet den Vertex Buffer Object (VBO).
+// Je nach 2D/3D werden die Attribute unterschiedlich gesetzt.
 OpenGLView::OpenGLView(GLuint vbo, unsigned int shaderProgram, size_t vertices_size, GLuint mode, bool is3d)
     : shaderProgram(shaderProgram), vertices_size(vertices_size), mode(mode), is3d(is3d)
 {
@@ -158,20 +161,19 @@ OpenGLView::OpenGLView(GLuint vbo, unsigned int shaderProgram, size_t vertices_s
 
     if (!is3d)
     {
+        // Für 2D: Nur Positionsdaten (x, y)
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), static_cast<void *>(nullptr));
         glEnableVertexAttribArray(0);
     }
     else
     {
-        // Position attribute
+        // Für 3D: Position, Farbe, Normalen
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), static_cast<void *>(nullptr));
         glEnableVertexAttribArray(0);
 
-        // Normal attribute
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), reinterpret_cast<void *>(6 * sizeof(float)));
         glEnableVertexAttribArray(1);
 
-        // Color attribute
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), reinterpret_cast<void *>(3 * sizeof(float)));
         glEnableVertexAttribArray(2);
     }
@@ -179,6 +181,7 @@ OpenGLView::OpenGLView(GLuint vbo, unsigned int shaderProgram, size_t vertices_s
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+// Hilfsfunktion zum Kompilieren eines Shaders und Fehlerausgabe
 void compile_shader(const GLint shader, const char *source)
 {
     glShaderSource(shader, 1, &source, nullptr);
@@ -196,6 +199,7 @@ void compile_shader(const GLint shader, const char *source)
     }
 }
 
+// Überprüft, ob das Shader-Programm erfolgreich gelinkt wurde
 void check_link_status(const GLint shader_program)
 {
     GLint status;
@@ -211,6 +215,7 @@ void check_link_status(const GLint shader_program)
     }
 }
 
+// Kompiliert und linkt Vertex- und Fragment-Shader zu einem Shader-Programm
 GLuint OpenGLRenderer::compile_and_link_shader(const char *vertex_src, const char *fragment_src)
 {
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -231,11 +236,13 @@ GLuint OpenGLRenderer::compile_and_link_shader(const char *vertex_src, const cha
     return shaderProgram;
 }
 
+// Destruktor: Gibt das VAO frei
 OpenGLView::~OpenGLView()
 {
     glDeleteVertexArrays(1, &vao);
 }
 
+// Rendert das Objekt mit der übergebenen Transformationsmatrix
 void OpenGLView::render(SquareMatrix<float, 4> &matrice)
 {
     debug(2, "render() entry...");
@@ -253,13 +260,16 @@ void OpenGLView::render(SquareMatrix<float, 4> &matrice)
     glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &matrice[0][0]);
 
     const int vertex_division = is3d ? 9 : 1;
-    // draw call/rendern
+    // Zeichnet die Geometrie
     glDrawArrays(mode, 0, vertices_size / vertex_division);
     debug(2, "render() exit.");
 }
 
-// class TypedBodyView
+// ===================== TypedBodyView =====================
 
+// Erweiterung von OpenGLView für Objekte mit Typ (z.B. Raumschiff, Asteroid)
+// draw: Funktion, die entscheidet, ob das Objekt gezeichnet wird
+// modify: Funktion, die vor dem Zeichnen Modifikationen erlaubt (z.B. Skalierung)
 TypedBodyView::TypedBodyView(TypedBody *typed_body, GLuint vbo, unsigned int shaderProgram, size_t vertices_size,
                              float scale, GLuint mode, bool is3d,
                              std::function<bool()> draw, std::function<void(TypedBodyView *)> modify)
@@ -268,6 +278,7 @@ TypedBodyView::TypedBodyView(TypedBody *typed_body, GLuint vbo, unsigned int sha
 {
 }
 
+// Erstellt eine Transformationsmatrix für Position, Rotation und Skalierung eines Objekts
 SquareMatrix4df TypedBodyView::create_object_transformation(Vector3df direction, float angle, float scale)
 {
     SquareMatrix4df translation = {
@@ -289,6 +300,7 @@ SquareMatrix4df TypedBodyView::create_object_transformation(Vector3df direction,
     return translation * rotation * scaling;
 }
 
+// Rendert das Objekt, falls draw() true liefert, und ruft ggf. modify() auf
 void TypedBodyView::render(SquareMatrix<float, 4> &world)
 {
     if (draw())
@@ -311,8 +323,9 @@ void TypedBodyView::set_scale(float scale)
     this->scale = scale;
 }
 
-// class OpenGLRenderer
+// ===================== OpenGLRenderer =====================
 
+// Erzeugt VBOs für alle 2D-Objekte und lädt die Daten in die GPU
 void OpenGLRenderer::createVbos()
 {
     vbos.resize(vertice_data.size());
@@ -326,7 +339,7 @@ void OpenGLRenderer::createVbos()
     }
 }
 
-// erstellt und speichert in 3d_vertice_data
+// Erzeugt VBOs für alle 3D-Objekte und lädt die Daten in die GPU
 void OpenGLRenderer::create3dVbos()
 {
     vbos3d.resize(vertice_3d_data.size());
@@ -340,30 +353,31 @@ void OpenGLRenderer::create3dVbos()
     }
 }
 
+// Erstellt die Views für das Raumschiff und dessen Flamme (3D)
 void OpenGLRenderer::create(Spaceship *ship, std::vector<std::unique_ptr<TypedBodyView>> &views)
 {
     debug(4, "create(Spaceship *) entry...");
-
-    // ship
+    // Raumschiff
     views.push_back(std::make_unique<TypedBodyView>(ship, vbos3d[0], shaderProgram3d, vertice_3d_data[0].size(), 1.0f,
                                                     GL_TRIANGLES, true,
                                                     [ship]() -> bool
                                                     {
                                                         return !ship->is_in_hyperspace();
-                                                    }) // only show ship if outside hyperspace
+                                                    }) // nur anzeigen, wenn nicht im Hyperspace
     );
-    // flame
+    // Flamme
     views.push_back(std::make_unique<TypedBodyView>(ship, vbos3d[5], shaderProgram3d, vertice_3d_data[5].size(), 1.0f,
                                                     GL_TRIANGLES, true,
                                                     [ship]() -> bool
                                                     {
                                                         return !ship->is_in_hyperspace() && ship->is_accelerating();
-                                                    }) // only show flame if accelerating
+                                                    }) // nur anzeigen, wenn beschleunigt wird
     );
 
     debug(4, "create(Spaceship *) exit.");
 }
 
+// Erstellt die View für die fliegende Untertasse (Saucer)
 void OpenGLRenderer::create(Saucer *saucer, std::vector<std::unique_ptr<TypedBodyView>> &views)
 {
     debug(4, "create(Saucer *) entry...");
@@ -376,6 +390,7 @@ void OpenGLRenderer::create(Saucer *saucer, std::vector<std::unique_ptr<TypedBod
     debug(4, "create(Saucer *) exit.");
 }
 
+// Erstellt die View für das Torpedo-Objekt
 void OpenGLRenderer::create(Torpedo *torpedo, std::vector<std::unique_ptr<TypedBodyView>> &views)
 {
     debug(4, "create(Torpedo *) entry...");
@@ -384,11 +399,10 @@ void OpenGLRenderer::create(Torpedo *torpedo, std::vector<std::unique_ptr<TypedB
     debug(4, "create(Torpedo *) exit.");
 }
 
+// Erstellt die View für einen Asteroiden
 void OpenGLRenderer::create(Asteroid *asteroid, std::vector<std::unique_ptr<TypedBodyView>> &views)
 {
     debug(4, "create(Asteroid *) entry...");
-    // GLuint rock_vbo_index = 4 + asteroid->get_rock_type();
-
     float scale = (asteroid->get_size() == 3 ? 1.0 : (asteroid->get_size() == 2 ? 0.5 : 0.25));
 
     views.push_back(std::make_unique<TypedBodyView>(asteroid, vbos3d[2], shaderProgram3d,
@@ -397,6 +411,7 @@ void OpenGLRenderer::create(Asteroid *asteroid, std::vector<std::unique_ptr<Type
     debug(4, "create(Asteroid *) exit.");
 }
 
+// Erstellt die View für Raumschiff-Trümmer (2D)
 void OpenGLRenderer::create(SpaceshipDebris *debris, std::vector<std::unique_ptr<TypedBodyView>> &views)
 {
     debug(4, "create(SpaceshipDebris *) entry...");
@@ -407,21 +422,23 @@ void OpenGLRenderer::create(SpaceshipDebris *debris, std::vector<std::unique_ptr
     debug(4, "create(SpaceshipDebris *) exit.");
 }
 
+// Erstellt die View für allgemeine Trümmer (Debris, 3D)
 void OpenGLRenderer::create(Debris *debris, std::vector<std::unique_ptr<TypedBodyView>> &views)
 {
     debug(4, "create(Debris *) entry...");
-    // 3D-Objekt für Debris verwenden (debris.obj, Index 3 in vertice_3d_data)
     float scale = 0.15f; // Debris ist klein
     views.push_back(std::make_unique<TypedBodyView>(debris, vbos3d[3], shaderProgram3d, vertice_3d_data[3].size(), scale, GL_TRIANGLES, true));
     debug(4, "create(Debris *) exit.");
 }
 
+// Erstellt die View für das Raumschiff (2D, für Lebensanzeige)
 void OpenGLRenderer::createSpaceShipView()
 {
     spaceship_view = std::make_unique<OpenGLView>(vbos[0], shaderProgram, vertice_data[0]->size(),
                                                   GL_LINE_LOOP, false);
 }
 
+// Erstellt die Views für die Ziffern (0-9)
 void OpenGLRenderer::createDigitViews()
 {
     for (size_t i = 0; i < 10; i++)
@@ -431,6 +448,7 @@ void OpenGLRenderer::createDigitViews()
     }
 }
 
+// Zeichnet die verbleibenden Leben (Schiffe) am oberen Bildschirmrand
 void OpenGLRenderer::renderFreeShips(const SquareMatrix4df &matrice) const
 {
     constexpr float FREE_SHIP_X = 128;
@@ -449,6 +467,7 @@ void OpenGLRenderer::renderFreeShips(const SquareMatrix4df &matrice) const
         {0.0f, 0.0f, 0.0f, 1.0f}};
     if (vbos3d.empty() || vertice_3d_data.empty() || vertice_3d_data[0].empty())
     {
+        // Fallback: 2D-Schiff
         for (int i = 0; i < num_ships; i++)
         {
             float x = start_x + i * SHIP_SPACING;
@@ -468,6 +487,7 @@ void OpenGLRenderer::renderFreeShips(const SquareMatrix4df &matrice) const
         }
         return;
     }
+    // 3D-Schiff
     for (int i = 0; i < num_ships; i++)
     {
         float x = start_x + i * SHIP_SPACING;
@@ -487,6 +507,7 @@ void OpenGLRenderer::renderFreeShips(const SquareMatrix4df &matrice) const
     }
 }
 
+// Zeichnet die aktuelle Punktzahl als Ziffern am oberen Bildschirmrand
 void OpenGLRenderer::renderScore(const SquareMatrix4df &matrice) const
 {
     constexpr float SCORE_X = 128 - 48;
@@ -516,9 +537,10 @@ void OpenGLRenderer::renderScore(const SquareMatrix4df &matrice) const
     } while (no_of_digits > 0);
 }
 
+// Erstellt und linkt die Shader-Programme für die 3D-Objekte
 void OpenGLRenderer::create_3dshader_programs()
 {
-    // Hier wird der Quellcode für den Vertex- und Fragment-Shader für die 3D-Objekte definiert
+    // Vertex-Shader für 3D-Objekte
     const auto vertexShaderSource3d = "#version 330 core\n"
                                       "layout (location = 0) in vec3 position;\n"
                                       "layout (location = 1) in vec3 incolor;\n"
@@ -533,6 +555,7 @@ void OpenGLRenderer::create_3dshader_programs()
                                       "normal = normalize( model * vec4(innormal, 1.0));\n"
                                       "}\0";
 
+    // Fragment-Shader für 3D-Objekte
     auto const fragmentShaderSource3d = "#version 330 core\n"
                                         "out vec4 outColor;\n"
                                         "in vec3 color;\n"
@@ -541,10 +564,7 @@ void OpenGLRenderer::create_3dshader_programs()
                                         "  outColor = vec4(color * (0.4 + 0.6 * max(0.0, dot(normal, normalize( vec4(0.0, 1.0, -4.0, 0.0))))) , 1.0);\n"
                                         "}\n\0";
 
-    // Hier werden die Shader kompiliert und das Shader-Programm erstellt und gelinkt (glCreateProgram())
-    // und die Fragment-Data-Location gesetzt (glBindFragDataLocation())
-    // und das Shader-Programm gelinkt (glLinkProgram())
-    // und der Status des Linkens überprüft (GL_LINK_STATUS)
+    // Kompilieren und Linken der Shader
     const GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     compile_shader(vertexShader, vertexShaderSource3d);
     const GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -557,7 +577,6 @@ void OpenGLRenderer::create_3dshader_programs()
     GLint status;
     glGetProgramiv(shaderProgram3d, GL_LINK_STATUS, &status);
 
-    // Hier wird eine Fehlermeldung ausgegeben, wenn das Linken fehlschlägt und das Programm beendet (throw EXIT_FAILURE)
     if (status == GL_FALSE)
     {
         GLint length;
@@ -569,9 +588,11 @@ void OpenGLRenderer::create_3dshader_programs()
     }
 }
 
+// Konstruktor für den Renderer: Initialisiert Fensterparameter und Titel
 OpenGLRenderer::OpenGLRenderer(Game &game, std::string title, int window_width, int window_height)
     : Renderer(game), title(std::move(title)), window_width(window_width), window_height(window_height) {}
 
+// Erstellt und linkt die Shader-Programme für die 2D-Objekte
 void OpenGLRenderer::create_shader_programs()
 {
     static auto vertexShaderSource = "#version 330 core\n"
@@ -589,11 +610,10 @@ void OpenGLRenderer::create_shader_programs()
                                        "   FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
                                        "}\n\0";
 
-    // build and compile vertex shader
+    // Kompilieren und Linken der Shader (analog zu oben)
     const unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
     glCompileShader(vertexShader);
-    // check for shader compile errors
     int success;
     char infoLog[512];
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
@@ -604,11 +624,9 @@ void OpenGLRenderer::create_shader_programs()
         error(std::string("vertex shader compilation failed") + infoLog);
     }
 
-    // build and compiler fragment shader
     const unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
     glCompileShader(fragmentShader);
-    // check for shader compile errors
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
 
     if (!success)
@@ -617,12 +635,10 @@ void OpenGLRenderer::create_shader_programs()
         error(std::string("fragment shader compilation failed") + infoLog);
     }
 
-    // link both shaders
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram);
-    // check for linking errors
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
 
     if (!success)
@@ -632,8 +648,10 @@ void OpenGLRenderer::create_shader_programs()
     }
 }
 
+// Standardmaterial für Wavefront-Objekte
 Material default_material = {{1.0f, 1.0f, 1.0f}};
 
+// Wandelt die von WavefrontImporter geladenen Daten in ein Vertex-Array für OpenGL um
 std::vector<float> create_vertices(WavefrontImporter &wi)
 {
     std::vector<float> vertices;
@@ -660,17 +678,7 @@ std::vector<float> create_vertices(WavefrontImporter &wi)
     return vertices;
 }
 
-/*
-std::vector<Vector2df> get_points(const std::vector<float> &vertices) {
-    std::vector<Vector2df> points;
-    for (size_t i = 0; i < vertices.size(); i += 9) {
-        Vector2df point = {vertices[i], vertices[i + 1]};
-        points.push_back(point);
-    }
-    return points;
-}
-*/
-
+// Lädt die 3D-Objekte aus Wavefront-Obj-Dateien
 bool OpenGLRenderer::load_objects(const std::vector<std::string> &object_files)
 {
     vertice_3d_data.clear();
@@ -693,6 +701,7 @@ bool OpenGLRenderer::load_objects(const std::vector<std::string> &object_files)
     return success;
 }
 
+// Initialisiert SDL, OpenGL, GLEW, lädt Objekte und erstellt alle benötigten Ressourcen
 bool OpenGLRenderer::init()
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -718,7 +727,7 @@ bool OpenGLRenderer::init()
 
             context = SDL_GL_CreateContext(window);
 
-            GLenum err = glewInit(); // to be called after OpenGL render context is created
+            GLenum err = glewInit(); // Muss nach dem Erstellen des OpenGL-Kontexts aufgerufen werden
             if (GLEW_OK != err)
             {
                 error("Could not initialize Glew. Glew error message: ");
@@ -729,7 +738,7 @@ bool OpenGLRenderer::init()
 
             SDL_GL_SetSwapInterval(1);
 
-            // Aufgabe_3
+            // Aufgabe_3: Lade alle benötigten 3D-Objekte
             load_objects({{"spaceship.obj"}, {"saucer.obj"}, {"asteroid.obj"}, {"debris.obj"}, {"torpedo.obj"}, {"spaceship_boost.obj"}});
 
             create_shader_programs();
@@ -744,75 +753,53 @@ bool OpenGLRenderer::init()
     return false;
 }
 
-/* tile positions in world coordinates
-   used to draw objects seemless between boundary
-  +---+---+---+
-  | 5 | 7 | 2 |
-  +---+---+---+
-  | 4 | 0 | 1 |
-  +---+---+---+
-  | 6 | 8 | 3 |
-  +---+---+---+
-*/
-static Vector2df tile_positions[] = {
-    {0.0f, 0.0f},
-    {1024.0f, 0.0f},
-    {1024.0f, 768.0f},
-    {1024.0f, -768.0f},
-    {-1024.0f, 0.0f},
-    {-1024.0f, 768.0f},
-    {-1024.0f, -768.0f},
-    {0.0f, 768.0f},
-    {0.0f, -768.0f}};
+// ===================== Render-Loop =====================
 
+// Rendert die komplette Szene: Transformation, Objekte, Lebensanzeige, Punktzahl
 void OpenGLRenderer::render()
 {
     debug(2, "render() entry...");
 
-    // transformation to canonical view and from left handed to right handed coordinates
+    // Transformation in den kanonischen Viewport und von Links- nach Rechtshändigkeit
     SquareMatrix4df world_transformation =
         SquareMatrix4df{
             {2.0f / window_width, 0.0f, 0.0f, 0.0f},
             {0.0f, -2.0f / window_height, 0.0f, 0.0f},
-            // (negative, because we have a left handed world coord. system)
             {0.0f, 0.0f, 2.0f / window_width, 0.0f},
             {-1.0f, 1.0f, -1.0f, 1.0f}};
 
-    // Calculate the center of the window
+    // Mittelpunkt des Fensters berechnen
     float center_x = window_width / 2.0f;
     float center_y = window_height / 2.0f;
 
-    // transform world based on ship position
+    // Welttransformation ggf. um die Schiffsposition verschieben (Kamera folgt dem Schiff)
     SquareMatrix4df combined_transformation = world_transformation;
     if (game.ship_exists())
     {
         Spaceship *spaceship = game.get_ship();
-        // Vector2df movement_vector = spaceship->get_velocity();
         Vector2df current_position = spaceship->get_position();
 
-        // Define the translation matrix using the spaceship's position
         SquareMatrix4df spaceship_position_translation =
             SquareMatrix4df{
                 {1.0f, 0.0f, 0.0f, 0.0f},
                 {0.0f, 1.0f, 0.0f, 0.0f},
                 {0.0f, 0.0f, 1.0f, 0.0f},
-                {center_x - current_position[0], center_y - current_position[1], 0.0f, 1.0f}
-                // Translate by the spaceship's acceleration
-            };
+                {center_x - current_position[0], center_y - current_position[1], 0.0f, 1.0f}};
 
-        // Combine the translation matrix with the world transformation matrix
         combined_transformation = world_transformation * spaceship_position_translation;
     }
 
+    // Bildschirm löschen
     glClearColor(0.0, 0.0, 0.0, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     debug(2, "remove views for deleted objects");
 
-    // remove all views for typed bodies that have to be deleted
+    // Entferne alle Views, deren Objekte gelöscht werden sollen
     erase_if(views, [](std::unique_ptr<TypedBodyView> &view)
              { return view->get_typed_body()->is_marked_for_deletion(); });
 
+    // Neue Objekte aus der Physik-Engine hinzufügen
     auto new_bodies = game.get_physics().get_recently_added_bodies();
     for (Body2df *body : new_bodies)
     {
@@ -846,6 +833,7 @@ void OpenGLRenderer::render()
     }
 
     debug(2, "render all views");
+    // Kacheln für das nahtlose Zeichnen am Rand (Wrap-Around)
     const std::vector<Vector2df> kachels = {
         {static_cast<float>(-window_width), static_cast<float>(window_height)},
         {0.0f, static_cast<float>(window_height)},
@@ -862,8 +850,7 @@ void OpenGLRenderer::render()
             {1.0f, 0.0f, 0.0f, 0.0f},
             {0.0f, 1.0f, 0.0f, 0.0f},
             {0.0f, 0.0f, 1.0f, 0.0f},
-            {kachel[0], kachel[1], 0.0f, 1.0f} // Translate by the spaceship's acceleration
-        };
+            {kachel[0], kachel[1], 0.0f, 1.0f}};
 
         SquareMatrix4df configured_transformation = combined_transformation * kachel_position_translation;
         for (auto &view : views)
@@ -872,6 +859,7 @@ void OpenGLRenderer::render()
         }
     }
 
+    // Lebensanzeige und Punktzahl rendern
     renderFreeShips(world_transformation);
     renderScore(world_transformation);
 
@@ -879,6 +867,7 @@ void OpenGLRenderer::render()
     debug(2, "render() exit.");
 }
 
+// Gibt alle Ressourcen frei und beendet SDL
 void OpenGLRenderer::exit()
 {
     views.clear();
@@ -891,6 +880,7 @@ void OpenGLRenderer::exit()
     SDL_Quit();
 }
 
+// Destruktor: Gibt alle Ressourcen frei
 OpenGLRenderer::~OpenGLRenderer()
 {
     views.clear();
