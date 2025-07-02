@@ -245,8 +245,8 @@ OpenGLView::~OpenGLView()
 // Rendert das Objekt mit der übergebenen Transformationsmatrix
 void OpenGLView::render(SquareMatrix<float, 4> &matrice)
 {
-    debug(2, "render() entry...");
     glBindVertexArray(vao);
+	//Shader Programm auswählen
     glUseProgram(shaderProgram);
     unsigned int transformLoc;
     if (is3d)
@@ -262,7 +262,6 @@ void OpenGLView::render(SquareMatrix<float, 4> &matrice)
     const int vertex_division = is3d ? 9 : 1;
     // Zeichnet die Geometrie
     glDrawArrays(mode, 0, vertices_size / vertex_division);
-    debug(2, "render() exit.");
 }
 
 // ===================== TypedBodyView =====================
@@ -411,11 +410,11 @@ void OpenGLRenderer::create(Asteroid *asteroid, std::vector<std::unique_ptr<Type
     debug(4, "create(Asteroid *) exit.");
 }
 
-// Erstellt die View für Raumschiff-Trümmer (2D)
+// Erstellt die View für Raumschiff-Trümmer (3D)
 void OpenGLRenderer::create(SpaceshipDebris *debris, std::vector<std::unique_ptr<TypedBodyView>> &views)
 {
     debug(4, "create(SpaceshipDebris *) entry...");
-    views.push_back(std::make_unique<TypedBodyView>(debris, vbos[10], shaderProgram, vertice_data[10]->size(), 0.1f, GL_POINTS, false, []() -> bool
+    views.push_back(std::make_unique<TypedBodyView>(debris, vbos3d[3], shaderProgram3d, vertice_3d_data[3].size(), 0.1f, GL_POINTS, false, []() -> bool
                                                     { return true; }, [debris](TypedBodyView *view) -> void
                                                     { view->set_scale(
                                                           0.2f * (SpaceshipDebris::TIME_TO_DELETE - debris->get_time_to_delete())); }));
@@ -426,16 +425,11 @@ void OpenGLRenderer::create(SpaceshipDebris *debris, std::vector<std::unique_ptr
 void OpenGLRenderer::create(Debris *debris, std::vector<std::unique_ptr<TypedBodyView>> &views)
 {
     debug(4, "create(Debris *) entry...");
-    float scale = 0.15f; // Debris ist klein
-    views.push_back(std::make_unique<TypedBodyView>(debris, vbos3d[3], shaderProgram3d, vertice_3d_data[3].size(), scale, GL_TRIANGLES, true));
+    views.push_back(std::make_unique<TypedBodyView>(debris, vbos3d[3], shaderProgram3d, vertice_3d_data[3].size(), 0.1f, GL_TRIANGLES, true, []() -> bool
+                                                    { return true; }, [debris](TypedBodyView *view) -> void
+                                                    { view->set_scale(
+                                                          Debris::TIME_TO_DELETE - debris->get_time_to_delete()); }));
     debug(4, "create(Debris *) exit.");
-}
-
-// Erstellt die View für das Raumschiff (2D, für Lebensanzeige)
-void OpenGLRenderer::createSpaceShipView()
-{
-    spaceship_view = std::make_unique<OpenGLView>(vbos[0], shaderProgram, vertice_data[0]->size(),
-                                                  GL_LINE_LOOP, false);
 }
 
 // Erstellt die Views für die Ziffern (0-9)
@@ -745,7 +739,6 @@ bool OpenGLRenderer::init()
             create_3dshader_programs();
             createVbos();
             create3dVbos();
-            createSpaceShipView();
             createDigitViews();
             return true;
         }
@@ -760,7 +753,7 @@ void OpenGLRenderer::render()
 {
     debug(2, "render() entry...");
 
-    // Transformation in den kanonischen Viewport und von Links- nach Rechtshändigkeit
+    //Spielwelt Koordinaten in OpenGL-Koordinaten umwandeln
     SquareMatrix4df world_transformation =
         SquareMatrix4df{
             {2.0f / window_width, 0.0f, 0.0f, 0.0f},
@@ -779,6 +772,7 @@ void OpenGLRenderer::render()
         Spaceship *spaceship = game.get_ship();
         Vector2df current_position = spaceship->get_position();
 
+        // Verschieben des Schiffs in die Mitte des Fensters
         SquareMatrix4df spaceship_position_translation =
             SquareMatrix4df{
                 {1.0f, 0.0f, 0.0f, 0.0f},
